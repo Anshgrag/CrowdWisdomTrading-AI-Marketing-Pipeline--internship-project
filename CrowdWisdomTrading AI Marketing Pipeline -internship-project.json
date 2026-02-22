@@ -1,0 +1,1342 @@
+{
+  "name": "CrowdWisdomTrading AI Marketing Pipeline - FIXED",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "79c98d14-c235-4d84-a47f-8b5e7a0130ce",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1376,
+        416
+      ],
+      "notes": "Start the workflow manually."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Product input - simplified for testing\nconst products = [\n  {\n    name: \"Trader Basketball\",\n    description: \"Grip-enhanced basketball designed for traders to dribble past market volatility\",\n    category: \"Sports Equipment\",\n    price: \"$49.99\"\n  },\n  {\n    name: \"Trader Coffee Cup\",\n    description: \"Insulated coffee mug for all-night trading sessions\",\n    category: \"Accessories\",\n    price: \"$24.99\"\n  }\n];\n\nreturn products.map(p => ({ json: p }));"
+      },
+      "id": "16e4e7a3-50d2-46ed-b26e-b17abd75f65d",
+      "name": "Product Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        416
+      ],
+      "notes": "INPUT: Defines products to process."
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "8df94b44-caff-4fb1-afee-515ee0fb6190",
+      "name": "Process Products in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        416
+      ],
+      "notes": "BATCH PROCESSING: Processes one product at a time."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "start-time",
+              "name": "start_time",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "product-name",
+              "name": "product_name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "product-desc",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "tokens-used",
+              "name": "tokens_used",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "credits-used",
+              "name": "credits_used",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "processing",
+              "type": "string"
+            },
+            {
+              "id": "errors",
+              "name": "errors",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "retry-count",
+              "name": "video_retry_count",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "45e44a82-71be-41d9-b84d-b63d9d790d3f",
+      "name": "Initialize Tracking",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -704,
+        416
+      ],
+      "notes": "TRACKING: Initializes metadata tracking including retry counter."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyCwFqOZmOBg6VvYwpiyefG5q1io6HZFTNU"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a marketing expert for CrowdWisdomTrading (www.crowdwisdomtrading.com), a financial trading platform.\\n\\nProduct: {{ $json.product_name }}\\nDescription: {{ $json.description }}\\n\\nGenerate marketing content in strict JSON format. Output ONLY valid JSON — no explanations, no markdown, no code blocks, no ```json wrapper, nothing else.\\n\\n{\\n  \\\"hook\\\": \\\"compelling one-line hook (max 15 words)\\\",\\n  \\\"ad_script\\\": \\\"full ad script (50-100 words, engaging, professional, motivational)\\\",\\n  \\\"brand_image_prompt\\\": \\\"professional close-up headshot photo for HeyGen talking avatar: front-facing, clear visible face with normal human proportions, eyes looking directly at camera, neutral confident expression, professional studio lighting, high detail 4K resolution, realistic photo style, subtle CrowdWisdomTrading branding with navy blue and emerald green tones, minimalist dark background with very faint glowing trading charts, no hats, no glasses, no hands covering face, clean sharp focus on face\\\",\\n  \\\"product_image_prompt\\\": \\\"premium product photo: high-tech aesthetic, CrowdWisdomTrading branding, professional studio lighting, 4K resolution, clean minimalist composition, product: {{ $json.product_name }}\\\"\\n}\\n\\nOutput ONLY the JSON object above.\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.7,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 1000\n  }\n}",
+        "options": {}
+      },
+      "id": "ba4b3745-9f80-4ed0-af64-3b0fcda4963b",
+      "name": "Generate Marketing Content (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -496,
+        416
+      ],
+      "continueOnFail": true,
+      "notes": "LLM CONTENT GENERATION: Uses Gemini API."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini response with better error handling\nconst response = $input.first().json;\nlet content;\nconst currentData = $('Initialize Tracking').item.json;\n\ntry {\n  if (response.candidates && response.candidates[0] && response.candidates[0].content) {\n    const text = response.candidates[0].content.parts[0].text;\n    \n    let jsonStr = text.trim();\n    if (jsonStr.startsWith('```json')) {\n      jsonStr = jsonStr.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n    } else if (jsonStr.startsWith('```')) {\n      jsonStr = jsonStr.replace(/```\\n?/g, '');\n    }\n    \n    content = JSON.parse(jsonStr);\n  } else {\n    throw new Error('Invalid response structure');\n  }\n} catch (error) {\n  // Fallback content\n  content = {\n    hook: `Master ${currentData.product_name} for trading success`,\n    ad_script: `Introducing ${currentData.product_name} - designed for serious traders. ${currentData.description}`,\n    brand_image_prompt: 'A realistic photo of a young professional trader sitting at a desk in a dimly lit room, working on multiple computer monitors showing real stock charts and candlestick graphs, holding the product naturally, focused expression, slight eye strain, casual posture, messy desk with coffee cup and notes, soft screen glow lighting, natural shadows, shot on DSLR camera, 50mm lens, shallow depth of field, ultra realistic, no CGI, no illustration, real human skin texture, natural imperfections, cinematic but authentic, advertisement style',\n    product_image_prompt: `Premium ${currentData.product_name}, CrowdWisdomTrading branding, professional lighting`\n  };\n  \n  const errors = JSON.parse(currentData.errors || '[]');\n  errors.push(`Content parsing error: ${error.message}`);\n  currentData.errors = JSON.stringify(errors);\n}\n\n// Calculate tokens\nconst inputText = JSON.stringify($('Generate Marketing Content (Gemini)').item.json);\nconst outputText = JSON.stringify(content);\nconst tokensUsed = Math.ceil((inputText.length + outputText.length) / 4);\n\ncurrentData.tokens_used = (currentData.tokens_used || 0) + tokensUsed;\n\nreturn [{\n  json: {\n    ...currentData,\n    ...content\n  }\n}];"
+      },
+      "id": "148691f4-1f32-4e6d-929d-aa092b7160a3",
+      "name": "Parse & Validate Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        368
+      ],
+      "continueOnFail": true,
+      "notes": "PARSING: Extracts JSON from LLM response with fallback."
+    },
+    {
+      "parameters": {
+        "jsCode": "// If Pollinations failed (530), use placeholder image so pipeline continues\nconst input = $input.first();\nconst hasBinary = input.binary && input.binary.data;\n\nif (hasBinary && !input.json.error) {\n  return [$input.first()];\n}\n\nconst parseData = $('Parse & Validate Content').item.json;\ntry {\n  const response = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://placehold.co/1024x1024.png',\n    encoding: 'arraybuffer'\n  });\n  const buffer = Buffer.isBuffer(response) ? response : Buffer.from(response);\n  const binaryData = await this.helpers.prepareBinaryData(buffer, 'brand-image.png', 'image/png');\n  return [{ json: parseData, binary: { data: binaryData } }];\n} catch (e) {\n  const errs = JSON.parse(parseData.errors || '[]');\n  errs.push('Fallback image failed: ' + e.message);\n  parseData.errors = JSON.stringify(errs);\n  throw new Error('Fallback image failed: ' + e.message);\n}"
+      },
+      "id": "412a5eaa-6802-4391-938f-e939b2d83627",
+      "name": "Ensure Brand Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        192
+      ],
+      "notes": "If Pollinations failed (530), fetches placeholder image so pipeline continues."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.heygen.com/v1/asset",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "sk_V2_hgu_kOwRxolVnKV_i302jj6yP4FvRsJq5JzDFbVwJQOfuugR"
+            },
+            {
+              "name": "Content-Type",
+              "value": "image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "d8e46693-3a2e-4acb-a169-30ee6b1ccfde",
+      "name": "Upload Image to HeyGen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        144
+      ],
+      "continueOnFail": true,
+      "notes": "HEYGEN UPLOAD: Uploads brand image to HeyGen."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract image_key with safe error handling\nconst response = $input.first().json;\nconst currentData = $('Parse & Validate Content')?.item?.json || $('Initialize Tracking')?.item?.json || {};\n\n// Safe extract image key\nlet imageKey = null;\nif (response?.data?.image_key) {\n  imageKey = response.data.image_key;\n} else if (response?.image_key) {\n  imageKey = response.image_key;\n} else if (response?.data?.url) {\n  imageKey = response.data.url.split('/').pop(); // fallback to filename if key missing\n}\n\n// Safe error array handling (avoid JSON.parse crash)\nlet errors = [];\ntry {\n  errors = JSON.parse(currentData.errors || '[]');\n} catch (e) {\n  console.warn('Invalid errors string, resetting:', currentData.errors);\n  errors = [];\n}\n\n// Log error if no key found\nif (!imageKey) {\n  errors.push('Failed to get image_key from HeyGen upload response');\n}\n\ncurrentData.errors = JSON.stringify(errors);\ncurrentData.brand_image_key = imageKey || 'fallback-key-' + Date.now();\n\n// Optional: log for debugging\nconsole.log('Extracted image_key:', imageKey);\nconsole.log('Current errors:', errors);\n\nreturn [{\n  json: currentData\n}];"
+      },
+      "id": "7180b4db-71ef-48b5-9d90-71d0101a21bd",
+      "name": "Extract Image Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        224
+      ],
+      "continueOnFail": true,
+      "notes": "EXTRACTION: Extracts image_key from HeyGen upload."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/photo_avatar/avatar_group/create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "sk_V2_hgu_kGVKS7vQayW_5Zhnd00JY1gxKL5gy0rP9jxDakv3QSsE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_key\": \"{{ $json.brand_image_key }}\",\n  \"name\": \"{{ $json.product_name }} Avatar\"\n}",
+        "options": {}
+      },
+      "id": "a84a4469-1be7-45db-a9ef-5d5f619fb50f",
+      "name": "Create HeyGen Avatar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        304
+      ],
+      "continueOnFail": true,
+      "notes": "AVATAR CREATION: Creates talking photo avatar."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract avatar_id with fallback\nconst response = $input.first().json;\nconst avatarId = response?.data?.id || response?.data?.avatar_id || response?.avatar_id;\nconst currentData = $('Extract Image Key').item.json;\n\nif (!avatarId) {\n  const errors = JSON.parse(currentData.errors || '[]');\n  errors.push('Avatar creation failed, using fallback');\n  currentData.errors = JSON.stringify(errors);\n  currentData.avatar_id = '2411df8bdb0d40b088aa453d4c2a2d20'; // Fallback avatar ID\n  currentData.avatar_creation_failed = true;\n} else {\n  currentData.avatar_id = avatarId;\n}\n\nreturn [{ json: currentData }];"
+      },
+      "id": "eb33410e-f7fc-4c7f-906b-f2f8267375cf",
+      "name": "Extract Avatar ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        368
+      ],
+      "continueOnFail": true,
+      "notes": "AVATAR ID: Extracts avatar_id with fallback."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store product image URL\nconst currentData = $('Extract Avatar ID').item.json;\nconst productImageNode = $('Generate Product Image3');\n\nif (productImageNode && productImageNode.item && productImageNode.item.binary) {\n  currentData.product_image_binary = true;\n} else {\n  currentData.product_image_url = 'https://via.placeholder.com/1280x720?text=Product+Image';\n}\n\nreturn [{ json: currentData }];"
+      },
+      "id": "ea3eb78f-04d5-4960-b677-9227f903d119",
+      "name": "Store Product Image Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        640
+      ],
+      "continueOnFail": true,
+      "notes": "STORAGE: Stores product image information."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "sk_8385d27652df7c0fa02916d6bf5c116b65c147503857cf4d"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $json.hook }}. {{ $json.ad_script }}\",\n  \"model_id\": \"eleven_multilingual_v2\",\n  \"voice_settings\": {\n    \"stability\": 0.5,\n    \"similarity_boost\": 0.75,\n    \"style\": 0.0,\n    \"use_speaker_boost\": true\n  }\n}",
+        "options": {}
+      },
+      "id": "27d3de40-eee1-43d6-9ba2-8976d1db17bc",
+      "name": "Generate Voice (11labs)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        384,
+        624
+      ],
+      "continueOnFail": true,
+      "notes": "VOICE GENERATION: Creates voiceover using ElevenLabs."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process voice response - handle 11labs 401: no audio_url = use HeyGen TTS later\nconst response = $input.first().json;\nconst currentData = $('Store Product Image Info').item.json;\nlet audioUrl = response?.audio_url || response?.data?.audio_url;\nconst isError = response?.error || response?.statusCode === 401;\nif (isError || !audioUrl) {\n  currentData.audio_url = null;\n  currentData.use_heygen_tts = true;\n  currentData.script_text = (currentData.hook || '') + '. ' + (currentData.ad_script || '');\n  currentData.audio_credits = 0;\n} else {\n  currentData.audio_url = audioUrl;\n  currentData.use_heygen_tts = false;\n  const scriptText = currentData.ad_script || '';\n  const hookText = currentData.hook || '';\n  currentData.credits_used = (currentData.credits_used || 0) + Math.ceil((scriptText + hookText).length / 1000);\n  currentData.audio_credits = Math.ceil((scriptText + hookText).length / 1000);\n}\nreturn [{ json: currentData }];"
+      },
+      "id": "fc937d66-b7db-46ad-b8a3-75e4cea7257b",
+      "name": "Process Voice Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        688
+      ],
+      "continueOnFail": true,
+      "notes": "VOICE: Uses HeyGen TTS when 11labs returns 401."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build HeyGen request: use text+voice_id when 11labs failed (401), else audio_url\nconst d = $input.first().json;\nconst voice = d.use_heygen_tts || !d.audio_url\n  ? { type: 'text', input_text: (d.script_text || d.hook + '. ' + d.ad_script).substring(0, 4900), voice_id: '1bd001e7e50f421d891986aad5158bc8' }\n  : { type: 'audio', audio_url: d.audio_url };\nd.video_body = {\n  dimension: { width: 1280, height: 720 },\n  video_inputs: [{\n    character: { type: 'avatar', avatar_id: d.avatar_id || '2411df8bdb0d40b088aa453d4c2a2d20', avatar_style: 'normal' },\n    voice,\n    background: { type: 'image', url: d.product_image_url || 'https://via.placeholder.com/1280x720' }\n  }],\n  caption: true,\n  test: false\n};\nreturn [{ json: d }];"
+      },
+      "id": "eb31544d-4d1c-480b-abbd-36e381145991",
+      "name": "Prepare Video Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        752
+      ],
+      "notes": "Builds HeyGen body: text TTS when 11labs fails."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/video/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "sk_V2_hgu_kaXuXDLUmX3_gBgq8rVkSKuTEgjTIZA4dyBefaBnhUfH"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.video_body) }}",
+        "options": {}
+      },
+      "id": "1d23c0ce-a9b4-4708-8bf8-88c2eb132f65",
+      "name": "Create HeyGen Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        656
+      ],
+      "continueOnFail": true,
+      "notes": "VIDEO GENERATION: Creates final marketing video."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract video_id with error handling\nconst response = $input.first().json;\nconst videoId = response?.data?.video_id || response?.video_id;\nconst currentData = $('Prepare Video Body').item.json;\n\nif (!videoId) {\n  const errors = JSON.parse(currentData.errors || '[]');\n  errors.push('Failed to get video_id from HeyGen');\n  currentData.errors = JSON.stringify(errors);\n  currentData.status = 'failed';\n  currentData.video_id = null;\n} else {\n  currentData.credits_used = (currentData.credits_used || 0) + 1;\n  currentData.video_id = videoId;\n  currentData.video_status = 'processing';\n  currentData.video_retry_count = 0; // Initialize retry counter\n}\n\nreturn [{ json: currentData }];"
+      },
+      "id": "a4dfe4df-c38a-4477-83fb-963b2ce4adc3",
+      "name": "Extract Video ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        512
+      ],
+      "continueOnFail": true,
+      "notes": "VIDEO ID: Extracts video_id and initializes retry counter."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check retry count and wait\nconst currentData = $input.first().json;\nconst maxRetries = 10; // Maximum 10 retries (5 minutes total)\nconst retryCount = currentData.video_retry_count || 0;\n\nif (retryCount >= maxRetries) {\n  // Max retries reached, mark as failed\n  const errors = JSON.parse(currentData.errors || '[]');\n  errors.push(`Video processing timeout after ${maxRetries} retries`);\n  currentData.errors = JSON.stringify(errors);\n  currentData.status = 'failed';\n  currentData.video_status = 'timeout';\n  return [{ json: currentData }];\n}\n\n// Wait 30 seconds before checking status\n// Note: In n8n, we'll use a Wait node, but this code prepares the data\ncurrentData.video_retry_count = retryCount + 1;\n\nreturn [{ json: currentData }];"
+      },
+      "id": "0953e2dc-18f4-4641-aa26-1b38c0e66fb4",
+      "name": "Check Retry Limit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        512
+      ],
+      "continueOnFail": true,
+      "notes": "RETRY CHECK: Checks if max retries reached. Prevents infinite loop."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "max-retries",
+              "leftValue": "={{ $json.video_retry_count }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "number",
+                "operation": "smaller"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ca6732d8-edcf-40e4-bd82-70e9996b8379",
+      "name": "Retry Limit Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        512
+      ],
+      "notes": "CONDITIONAL: Checks if we should continue retrying or fail."
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "id": "782d24ad-1d98-4604-804f-398dd42d53b5",
+      "name": "Wait 30 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        512
+      ],
+      "webhookId": "video-wait-webhook",
+      "notes": "WAIT: Waits 30 seconds before checking video status."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.heygen.com/v1/video_status.get?video_id={{ $json.video_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "sk_V2_hgu_kZXjPfihon6_0tvmJ4Tz4tR33r3nYXjxFXlSSaQsDVvt"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06436431-9ca1-4fe5-8c6a-f61f3250dbb0",
+      "name": "Check Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        512
+      ],
+      "continueOnFail": true,
+      "notes": "STATUS CHECK: Polls HeyGen API for video status."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process status response\nconst statusResponse = $input.first().json;\nconst currentData = $('Check Retry Limit').item.json;\n\nconst videoStatus = statusResponse?.data?.status || statusResponse?.status || 'unknown';\nconst videoUrl = statusResponse?.data?.video_url || statusResponse?.video_url || null;\n\ncurrentData.video_status = videoStatus;\ncurrentData.video_url = videoUrl;\n\nif (videoStatus === 'completed' && videoUrl) {\n  currentData.status = 'completed';\n} else if (videoStatus === 'failed' || videoStatus === 'error') {\n  const errors = JSON.parse(currentData.errors || '[]');\n  errors.push(`Video generation failed: ${videoStatus}`);\n  currentData.errors = JSON.stringify(errors);\n  currentData.status = 'failed';\n} else {\n  // Still processing, will retry\n  currentData.status = 'processing';\n}\n\nreturn [{ json: currentData }];"
+      },
+      "id": "b7a28066-d015-487b-bb09-d771bd851ca2",
+      "name": "Process Status Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        512
+      ],
+      "continueOnFail": true,
+      "notes": "PROCESS STATUS: Processes video status response."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "video-ready",
+              "leftValue": "={{ $json.video_status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "893753e5-0cf8-48d8-8402-fc245983c1c7",
+      "name": "Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        512
+      ],
+      "notes": "CONDITIONAL: Checks if video is completed."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Finalize video data\nconst currentData = $input.first().json;\n\n// Calculate processing time\nconst startTime = new Date(currentData.start_time);\nconst endTime = new Date();\nconst processingTime = Math.round((endTime - startTime) / 1000);\n\ncurrentData.processing_time_seconds = processingTime;\n\nreturn [{ json: currentData }];"
+      },
+      "id": "09ccb40d-c7fb-4d94-a139-590865589c70",
+      "name": "Finalize Video Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        416
+      ],
+      "continueOnFail": true,
+      "notes": "FINALIZATION: Finalizes video data with processing time."
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.video_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "780b6be4-6ebb-4777-9933-2a59ceeb1f1a",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2816,
+        416
+      ],
+      "continueOnFail": true,
+      "notes": "DOWNLOAD: Downloads video from HeyGen."
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.product_name.replace(/[^a-zA-Z0-9]/g, '_') }}_video_{{ $now.toFormat('yyyyMMdd_HHmmss') }}.mp4",
+        "driveId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "10bh0XyRzLwFKqqPJcDPbJqZjeg98rwC6"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "10bh0XyRzLwFKqqPJcDPbJqZjeg98rwC6"
+        },
+        "options": {}
+      },
+      "id": "db9629ab-c5b0-4561-9bcc-78822a8a4603",
+      "name": "Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3008,
+        256
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6IW8olmGepg4c63k",
+          "name": "Google Drive account"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "GOOGLE DRIVE: Uploads video to Google Drive."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1rnyL8E21qYJgkQyWJEWHCktBwtdDoVAUdnFUcfHiawk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 0
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.start_time }}",
+            "Product Name": "={{ $json.product_name }}",
+            "Status": "={{ $json.status }}",
+            "Video URL": "={{ $json.video_url || 'N/A' }}",
+            "Google Drive File": "={{ $json.id || $json.drive_file_id || 'N/A' }}",
+            "Hook": "={{ $json.hook || 'N/A' }}",
+            "Ad Script": "={{ $json.ad_script || 'N/A' }}",
+            "Tokens Used": "={{ $json.tokens_used || 0 }}",
+            "Credits Used": "={{ $json.credits_used || 0 }}",
+            "11labs Credits": "={{ $json.audio_credits || 0 }}",
+            "HeyGen Credits": "={{ ($json.credits_used || 0) - ($json.audio_credits || 0) }}",
+            "Retry Count": "={{ $json.video_retry_count || 0 }}",
+            "Errors": "={{ $json.errors || '[]' }}",
+            "Processing Time (s)": "={{ $json.processing_time_seconds || 0 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Name",
+              "displayName": "Product Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video URL",
+              "displayName": "Video URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Google Drive File",
+              "displayName": "Google Drive File",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hook",
+              "displayName": "Hook",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ad Script",
+              "displayName": "Ad Script",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens Used",
+              "displayName": "Tokens Used",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Credits Used",
+              "displayName": "Credits Used",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "11labs Credits",
+              "displayName": "11labs Credits",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "HeyGen Credits",
+              "displayName": "HeyGen Credits",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Retry Count",
+              "displayName": "Retry Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Errors",
+              "displayName": "Errors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processing Time (s)",
+              "displayName": "Processing Time (s)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3cc81944-5793-4232-a0dd-caaf08b13b9d",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        3264,
+        416
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LzR5q0dsJuXPInzc",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "LOGGING: Logs all execution data to Google Sheets."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler\nconst error = $input.first().json.error || $input.first().json;\nconst currentNode = $input.first().json.node || 'Unknown';\n\nlet tracker;\ntry {\n  tracker = $('Initialize Tracking').item?.json || $('Parse & Validate Content').item?.json || {};\n} catch (e) {\n  tracker = { errors: '[]', status: 'error' };\n}\n\nconst errors = JSON.parse(tracker.errors || '[]');\nerrors.push({\n  node: currentNode,\n  error: error.message || JSON.stringify(error),\n  timestamp: new Date().toISOString()\n});\n\ntracker.errors = JSON.stringify(errors);\ntracker.status = 'error';\n\nreturn [{ json: tracker }];"
+      },
+      "id": "9148278d-9a4c-45f2-abee-6ed9a4bc0cb6",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        416
+      ],
+      "notes": "ERROR HANDLING: Centralized error handler."
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash-exp-image-generation",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash-exp-image-generation"
+        },
+        "prompt": "={{ encodeURIComponent($json.brand_image_prompt) }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -128,
+        272
+      ],
+      "id": "413ce2e7-61c7-416a-aa91-ad4500bbf1bb",
+      "name": "Fetch Brand Image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "63du2dDfP3TNaaKB",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash-exp-image-generation",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash-exp-image-generation"
+        },
+        "prompt": "={{ encodeURIComponent($json.product_image_prompt) }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -128,
+        496
+      ],
+      "id": "f9b0645b-35be-4e7a-a3e6-3294cbf3c47d",
+      "name": "Generate Product Image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "63du2dDfP3TNaaKB",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        352
+      ],
+      "id": "156346d2-76c5-432b-a99c-70698fb2041f",
+      "name": "Wait",
+      "webhookId": "15080a44-8094-4b96-b757-545b3ba65224"
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \nthis NODE is for content generation for image prompt and for script generation for 11labs"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        288
+      ],
+      "id": "e8fb3c42-7298-4301-a882-0c05e7a1a74f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Image generation node using gemini api using the prompt generated by previous node\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        224
+      ],
+      "id": "0f48074b-ec02-49e4-b7c4-4fc12ad76985",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "11labs voice generation from text prompt "
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        304,
+        560
+      ],
+      "id": "ae593f95-7261-44f9-90e8-a9df5b64974a",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "heygen avatar generation using the image generated using gemini"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        224
+      ],
+      "id": "7ac5dbe7-55cd-4fae-84ae-c7f5958e526c",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Product Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Input": {
+      "main": [
+        [
+          {
+            "node": "Process Products in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Products in Batches": {
+      "main": [
+        [
+          {
+            "node": "Initialize Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Tracking": {
+      "main": [
+        [
+          {
+            "node": "Generate Marketing Content (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Marketing Content (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse & Validate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Validate Content": {
+      "main": [
+        [
+          {
+            "node": "Fetch Brand Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Product Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Brand Image": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to HeyGen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image to HeyGen": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Image Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Image Key": {
+      "main": [
+        [
+          {
+            "node": "Create HeyGen Avatar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HeyGen Avatar": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Avatar ID": {
+      "main": [
+        [
+          {
+            "node": "Store Product Image Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Product Image Info": {
+      "main": [
+        [
+          {
+            "node": "Generate Voice (11labs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Voice (11labs)": {
+      "main": [
+        [
+          {
+            "node": "Process Voice Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Voice Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Body": {
+      "main": [
+        [
+          {
+            "node": "Create HeyGen Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HeyGen Video": {
+      "main": [
+        [
+          {
+            "node": "Extract Video ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video ID": {
+      "main": [
+        [
+          {
+            "node": "Check Retry Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Retry Limit": {
+      "main": [
+        [
+          {
+            "node": "Retry Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Video Status": {
+      "main": [
+        [
+          {
+            "node": "Process Status Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Status Response": {
+      "main": [
+        [
+          {
+            "node": "Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Finalize Video Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Retry Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Video Data": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Process Products in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Brand Image": {
+      "main": [
+        [
+          {
+            "node": "Ensure Brand Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Product Image": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Store Product Image Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Extract Avatar ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f1071fbe-f176-4e51-b7d5-69687d4b1d32",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "35effb72e1f7ddba8956bdd2572cbb5ca314ff3ad2c9a86e46b9ea71fc809a1b"
+  },
+  "id": "MOyBEDRgOTBvHvpI",
+  "tags": []
+}

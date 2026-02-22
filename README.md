@@ -55,4 +55,5 @@ Thank you for the opportunity — excited to discuss how I can contribute to Cro
 
 Ansh  
 Mangaluru, Karnataka  
-[Your Email] | [Your Phone] | [LinkedIn]
+ansh20071807@gmail.com | 9902238219 | https://www.linkedin.com/in/ansh-garg-a56291353/
+
